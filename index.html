@@ -26,7 +26,7 @@
     }
     html, body {
       width: 100%;
-      height: 100%;
+      height: 100dvh;
       background: #000000;
       color: #ffffff;
       overflow: hidden;
@@ -39,20 +39,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: auto;
     }
     video {
+      aspect-ratio: 9 / 16;
+      height: 100%;
       width: auto;
-      height: auto;
       max-width: 100%;
-      max-height: 100%;
+      object-fit: cover;
       display: block;
     }
     .unmute-btn {
       position: fixed;
       top: 18px;
       right: 16px;
-      z-index: 10;
+      z-index: 20;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -65,6 +65,66 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+    }
+    .center-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.45);
+      cursor: pointer;
+    }
+    .center-stage.hidden {
+      display: none;
+    }
+    .play-ring-wrap {
+      position: relative;
+      width: 96px;
+      height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .arc-spinner {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(255, 255, 255, 0.14);
+      border-top-color: #ffffff;
+      animation: spinRing 0.9s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes spinRing {
+      to { transform: rotate(360deg); }
+    }
+    .red-play-circle {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #e11d2a;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(225, 29, 42, 0.45);
+    }
+    .red-play-circle svg {
+      width: 30px;
+      height: 30px;
+      margin-left: 4px;
+    }
+    .buffering-caption {
+      font-size: 15px;
+      font-weight: 500;
+      color: #e5e5e5;
+      letter-spacing: 0.2px;
+      text-align: center;
     }
   </style>
 </head>
@@ -79,28 +139,71 @@
       autoplay
       muted
       playsinline
-      preload="metadata"
+      preload="auto"
     ></video>
+  </div>
+
+  <div class="center-stage" id="bufferingOverlay">
+    <div class="play-ring-wrap">
+      <div class="arc-spinner"></div>
+      <button type="button" class="red-play-circle" id="playBtn" aria-label="Play">
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <polygon points="10,6 30,18 10,30" fill="#ffffff"></polygon>
+        </svg>
+      </button>
+    </div>
+    <div class="buffering-caption">Buffering HD Stream (99%)...</div>
   </div>
 
   <script>
     (function () {
       const video = document.getElementById("mainVideo");
+      const overlay = document.getElementById("bufferingOverlay");
+      const playBtn = document.getElementById("playBtn");
       const unmuteBtn = document.getElementById("unmuteBtn");
 
-      // Video sirf ek bar chalegi, end hone par ruk jayegi
+      // Video sirf ek bar chalegi
       video.loop = false;
+
+      function showOverlay() {
+        overlay.classList.remove("hidden");
+      }
+
+      function hideOverlay() {
+        overlay.classList.add("hidden");
+      }
+
+      video.addEventListener("playing", hideOverlay);
+      video.addEventListener("waiting", showOverlay);
+      video.addEventListener("pause", function () {
+        if (!video.ended) {
+          showOverlay();
+        }
+      });
       video.addEventListener("ended", function () {
         video.pause();
+        showOverlay();
       });
 
-      // User tap kare to sound on kare
+      function triggerPlay() {
+        video.play().catch(function () {});
+      }
+
+      playBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        triggerPlay();
+      });
+
+      overlay.addEventListener("click", triggerPlay);
+
       unmuteBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         video.muted = false;
-        video.play().catch(function () {});
+        triggerPlay();
         unmuteBtn.style.display = "none";
       });
+
+      triggerPlay();
     })();
   </script>
 </body>
